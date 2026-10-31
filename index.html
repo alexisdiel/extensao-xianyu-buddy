@@ -81,13 +81,28 @@
     if (!(window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage)) location.reload();
     else ping();
   };
+  // "Já instalei" with no answer: say so instead of doing nothing
+  const notFound = () => {
+    if (finished) return;
+    status.className = '';
+    status.textContent = 'Ainda não encontrei a extensão. Instale pela Chrome Web Store (botão acima) e clique em "Já instalei" de novo.';
+  };
   // Coming back from the store tab: reload so Chrome exposes chrome.runtime to the page
   let leftPage = false;
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') leftPage = true;
     else if (leftPage) reloadIfNeeded();
   });
-  document.getElementById('done').addEventListener('click', reloadIfNeeded);
+  document.getElementById('done').addEventListener('click', () => {
+    if (finished) return;
+    status.className = '';
+    status.textContent = 'Procurando a extensão…';
+    reloadIfNeeded();
+    setTimeout(notFound, 2500);
+  });
+  // After the reload triggered by "Já instalei" there is no click to wait for
+  try { if (sessionStorage.getItem('xb-install-checked')) setTimeout(notFound, 2500); } catch {}
+  document.getElementById('done').addEventListener('click', () => { try { sessionStorage.setItem('xb-install-checked', '1'); } catch {} });
 
   ping();
   setInterval(ping, 2000);
