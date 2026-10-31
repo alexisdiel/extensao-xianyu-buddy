@@ -98,10 +98,18 @@
     status.className = '';
     status.textContent = 'Procurando a extensão…';
     reloadIfNeeded();
-    setTimeout(notFound, 2500);
+    setTimeout(notFound, 1500);
   });
   // After the reload triggered by "Já instalei" there is no click to wait for
-  try { if (sessionStorage.getItem('xb-install-checked')) setTimeout(notFound, 2500); } catch {}
+  // The click reloads the page when Chrome hasn't exposed chrome.runtime yet: keep "searching" on screen
+  // through the reload, then answer.
+  try {
+    if (sessionStorage.getItem('xb-install-checked')) {
+      sessionStorage.removeItem('xb-install-checked');
+      status.textContent = 'Procurando a extensão…';
+      setTimeout(notFound, 1500);
+    }
+  } catch {}
   document.getElementById('done').addEventListener('click', () => { try { sessionStorage.setItem('xb-install-checked', '1'); } catch {} });
 
   ping();
