@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalar o Xianyu Buddy</title>
+<meta name="description" content="Extensão para comprar no Xianyu/Goofish: preço em reais, reputação do vendedor, alerta de réplica, tradução e atalhos de agentes.">
+<link rel="icon" href="icon-32.png">
+<!--
+  Install page with a referral: share https://alexisdiel.github.io/extensao-xianyu-buddy/?ref=<key>
+  (published by copying this folder to the root of the public repo alexisdiel/extensao-xianyu-buddy)
+  (<key> = an entry of REFERRAL_PROFILES in config/affiliate-codes.js). After the user installs from the
+  Chrome Web Store, this page tells the extension (externally_connectable in manifest.json) which partner
+  sent them; the service worker stores it once, on a fresh install. Without ?ref the page is a plain
+  install page. ?ext=<id> overrides the extension ID (testing an unpacked build).
+-->
+<style>
+  :root { --bg: #0f1115; --card: #181b22; --text: #f2f4f8; --muted: #9aa3b2; --accent: #7dd3fc; --ok: #4ade80; --line: rgba(255,255,255,0.08); }
+  @media (prefers-color-scheme: light) { :root { --bg: #f4f6fa; --card: #fff; --text: #141821; --muted: #5b6474; --accent: #0369a1; --ok: #15803d; --line: rgba(0,0,0,0.08); } }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { width: min(460px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 28px 24px; text-align: center; }
+  img.logo { width: 72px; height: 72px; border-radius: 16px; }
+  h1 { font-size: 22px; margin: 14px 0 6px; }
+  p { margin: 0 0 12px; color: var(--muted); }
+  ol { text-align: left; margin: 18px 0; padding-left: 20px; color: var(--muted); }
+  ol li { margin-bottom: 6px; }
+  a.btn, button.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px 16px; border-radius: 12px; border: 0; background: var(--accent); color: #04121c; font: 700 15px system-ui, sans-serif; text-decoration: none; cursor: pointer; }
+  button.link { margin-top: 10px; background: none; border: 0; color: var(--accent); font: 600 13px system-ui, sans-serif; cursor: pointer; }
+  #status { margin-top: 16px; font-size: 13px; min-height: 20px; }
+  #status.ok { color: var(--ok); font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="icon-128.png" alt="">
+  <h1>Xianyu Buddy</h1>
+  <p>Preço em reais, reputação do vendedor, alerta de réplica, tradução e atalhos de agentes no Xianyu/Goofish.</p>
+  <ol>
+    <li>Clique em <b>Instalar na Chrome Web Store</b> e depois em <b>Usar no Chrome</b>.</li>
+    <li>Volte para esta página e deixe-a aberta até aparecer <b>Pronto!</b></li>
+  </ol>
+  <a class="btn" id="install" href="https://chromewebstore.google.com/detail/xianyu-buddy/kafphinahoioiefhdgikjbliblhiekle" target="_blank" rel="noopener">Instalar na Chrome Web Store ↗</a>
+  <button class="link" id="done" type="button">Já instalei</button>
+  <div id="status"></div>
+</main>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const EXT_ID = /^[a-p]{32}$/.test(params.get('ext') || '') ? params.get('ext') : 'kafphinahoioiefhdgikjbliblhiekle';
+  let ref = (params.get('ref') || '').toLowerCase();
+  // Keep the referral if the page is reloaded without the query string
+  try {
+    if (/^[a-z0-9_-]{1,32}$/.test(ref)) localStorage.setItem('xb-install-ref', ref);
+    else ref = localStorage.getItem('xb-install-ref') || '';
+  } catch {}
+
+  const status = document.getElementById('status');
+  let finished = false;
+  const finish = () => {
+    finished = true;
+    status.className = 'ok';
+    status.textContent = 'Pronto! O Xianyu Buddy está instalado. Abra o goofish.com para usar.';
+  };
+
+  // chrome.runtime only shows up on this page once the extension is installed, and only after a reload
+  const ping = () => {
+    if (finished) return;
+    const rt = window.chrome && window.chrome.runtime;
+    if (!rt || !rt.sendMessage) return;
+    try {
+      rt.sendMessage(EXT_ID, { type: 'xb-ref', ref }, (res) => {
+        void (window.chrome.runtime.lastError);
+        if (res && res.installed) finish();
+      });
+    } catch {}
+  };
+
+  const reloadIfNeeded = () => {
+    if (finished) return;
+    if (!(window.chrome && window.chrome.runtime && window.chrome.runtime.sendMessage)) location.reload();
+    else ping();
+  };
+  // Coming back from the store tab: reload so Chrome exposes chrome.runtime to the page
+  let leftPage = false;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') leftPage = true;
+    else if (leftPage) reloadIfNeeded();
+  });
+  document.getElementById('done').addEventListener('click', reloadIfNeeded);
+
+  ping();
+  setInterval(ping, 2000);
+})();
+</script>
+</body>
+</html>
